@@ -1,6 +1,6 @@
 [package]
 name = "facet-deserialize"
-version = "0.24.22"
+version = "0.28.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

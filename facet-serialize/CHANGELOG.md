@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0](https://github.com/facet-rs/facet-serialize/compare/facet-serialize-v0.24.18...facet-serialize-v0.28.0) - 2025-07-24
+
+### Other
+
+- Initial import
+
 - Add start_some to serializer trait
 
 ## [0.24.18](https://github.com/facet-rs/facet/compare/facet-serialize-v0.24.17...facet-serialize-v0.24.18) - 2025-07-03

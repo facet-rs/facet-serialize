@@ -87,7 +87,7 @@ dependencies = [
 
 [[package]]
 name = "facet-deserialize"
-version = "0.24.22"
+version = "0.28.0"
 dependencies = [
  "ariadne",
  "cargo-husky",
@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "facet-serialize"
-version = "0.24.18"
+version = "0.28.0"
 dependencies = [
  "cargo-husky",
  "facet",
