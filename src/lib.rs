@@ -15,7 +15,7 @@ use facet_reflect::{
     FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekListLikeIter, PeekMapIter, PeekSetIter,
     ScalarType,
 };
-use log::{debug, trace};
+use log::trace;
 
 fn variant_is_newtype_like(variant: &facet_core::Variant) -> bool {
     variant.data.kind == facet_core::StructKind::Tuple && variant.data.fields.len() == 1
@@ -284,7 +284,7 @@ where
     while let Some(task) = stack.pop() {
         match task {
             SerializeTask::Value(mut cpeek, maybe_field) => {
-                debug!("Serializing a value, shape is {}", cpeek.shape());
+                trace!("Serializing a value, shape is {}", cpeek.shape());
 
                 if cpeek
                     .shape()
@@ -298,12 +298,12 @@ where
                     cpeek = ps.field(0).unwrap();
 
                     let new_shape = cpeek.shape();
-                    debug!(
+                    trace!(
                         "{old_shape} is transparent, let's serialize the inner {new_shape} instead"
                     );
                 }
 
-                debug!(
+                trace!(
                     "Matching def={:?}, ty={:?} for shape={}",
                     cpeek.shape().def,
                     cpeek.shape().ty,
@@ -489,8 +489,8 @@ where
                         }
                     }
                     (_, Type::User(UserType::Struct(sd))) => {
-                        debug!("Serializing struct: shape={}", cpeek.shape(),);
-                        debug!(
+                        trace!("Serializing struct: shape={}", cpeek.shape(),);
+                        trace!(
                             "  Struct details: kind={:?}, field_count={}",
                             sd.kind,
                             sd.fields.len()
@@ -498,15 +498,15 @@ where
 
                         match sd.kind {
                             StructKind::Unit => {
-                                debug!("  Handling unit struct (no fields)");
+                                trace!("  Handling unit struct (no fields)");
                                 // Correctly handle unit struct type when encountered as a value
                                 serializer.serialize_unit()?;
                             }
                             StructKind::Tuple => {
-                                debug!("  Handling tuple with {} fields", sd.fields.len());
+                                trace!("  Handling tuple with {} fields", sd.fields.len());
                                 let peek_struct = cpeek.into_struct().unwrap();
                                 let fields_iter = peek_struct.fields();
-                                debug!("  Serializing {} fields as tuple", sd.fields.len());
+                                trace!("  Serializing {} fields as tuple", sd.fields.len());
 
                                 stack.push(SerializeTask::Tuple {
                                     items: fields_iter,
@@ -518,10 +518,10 @@ where
                                 );
                             }
                             StructKind::TupleStruct => {
-                                debug!("  Handling tuple struct");
+                                trace!("  Handling tuple struct");
                                 let peek_struct = cpeek.into_struct().unwrap();
                                 let fields = peek_struct.fields_for_serialize().count();
-                                debug!("  Serializing {fields} fields as array");
+                                trace!("  Serializing {fields} fields as array");
 
                                 stack.push(SerializeTask::TupleStruct {
                                     items: peek_struct.fields_for_serialize(),
@@ -533,10 +533,10 @@ where
                                 );
                             }
                             StructKind::Struct => {
-                                debug!("  Handling record struct");
+                                trace!("  Handling record struct");
                                 let peek_struct = cpeek.into_struct().unwrap();
                                 let fields = peek_struct.fields_for_serialize().count();
-                                debug!("  Serializing {fields} fields as object");
+                                trace!("  Serializing {fields} fields as object");
 
                                 stack.push(SerializeTask::Object {
                                     entries: peek_struct.fields_for_serialize(),
@@ -640,7 +640,7 @@ where
                     }
                     _ => {
                         // Default case for any other definitions
-                        debug!(
+                        trace!(
                             "Unhandled type: {:?}, falling back to unit",
                             cpeek.shape().ty
                         );
