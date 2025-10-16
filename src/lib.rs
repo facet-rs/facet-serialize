@@ -13,7 +13,7 @@ use alloc::vec::Vec;
 use facet_core::{Def, Facet, Field, PointerType, ShapeAttribute, StructKind, Type, UserType};
 use facet_reflect::{
     FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekListLikeIter, PeekMapIter, PeekSetIter,
-    ScalarType,
+    ProxyPeek, ScalarType,
 };
 use log::trace;
 
@@ -262,6 +262,7 @@ enum SerializeTask<'mem, 'facet> {
     EndMapKey,
     EndMapValue,
     EndField,
+    EndProxy(ProxyPeek<'mem, 'facet>),
     // Field-related tasks
     SerializeFieldName(&'static str),
     SerializeMapKey(Peek<'mem, 'facet>),
@@ -285,6 +286,16 @@ where
         match task {
             SerializeTask::Value(mut cpeek, maybe_field) => {
                 trace!("Serializing a value, shape is {}", cpeek.shape());
+
+                if let Some(field) = &maybe_field
+                    && field.has_proxy()
+                {
+                    trace!("{} is a proxy", cpeek.shape());
+                    let proxy_peek = ProxyPeek::from_peek(cpeek, *field).unwrap();
+                    // TODO: should probably be unsafe, but forbid-unsafe
+                    cpeek = proxy_peek.as_peek();
+                    stack.push(SerializeTask::EndProxy(proxy_peek));
+                }
 
                 if cpeek
                     .shape()
@@ -518,7 +529,7 @@ where
                             StructKind::TupleStruct => {
                                 trace!("  Handling tuple struct");
                                 let peek_struct = cpeek.into_struct().unwrap();
-                                let fields = peek_struct.fields_for_serialize().count();
+                                let fields = peek_struct.field_count(); //fields_for_serialize().count();
                                 trace!("  Serializing {fields} fields as array");
 
                                 stack.push(SerializeTask::TupleStruct {
@@ -533,7 +544,7 @@ where
                             StructKind::Struct => {
                                 trace!("  Handling record struct");
                                 let peek_struct = cpeek.into_struct().unwrap();
-                                let fields = peek_struct.fields_for_serialize().count();
+                                let fields = peek_struct.field_count();
                                 trace!("  Serializing {fields} fields as object");
 
                                 stack.push(SerializeTask::Object {
@@ -797,6 +808,9 @@ where
             }
             SerializeTask::EndField => {
                 serializer.end_field()?;
+            }
+            SerializeTask::EndProxy(_proxy_peek) => {
+                // ensures proxy_peek is dropped after it's finished being used
             }
         }
     }
