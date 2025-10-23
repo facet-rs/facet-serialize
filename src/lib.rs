@@ -385,9 +385,7 @@ where
                             None => {
                                 // For other scalar types that don't have a specific ScalarType variant,
                                 // try to use Display formatting if available
-                                if let Some(_display) =
-                                    cpeek.shape().vtable.sized().and_then(|v| (v.display)())
-                                {
+                                if cpeek.shape().vtable.display.is_some() {
                                     // Use display formatting if available
                                     serializer.serialize_str(&alloc::format!("{cpeek}"))?
                                 } else {
