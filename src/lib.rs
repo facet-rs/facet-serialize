@@ -11,6 +11,8 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use facet_core::{Def, Facet, Field, PointerType, ShapeAttribute, StructKind, Type, UserType};
+#[cfg(feature = "alloc")]
+use facet_reflect::OwnedPeek;
 use facet_reflect::{
     FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekListLikeIter, PeekMapIter, PeekSetIter,
     ScalarType,
@@ -285,6 +287,23 @@ where
         match task {
             SerializeTask::Value(mut cpeek, maybe_field) => {
                 trace!("Serializing a value, shape is {}", cpeek.shape());
+
+                #[cfg(feature = "alloc")]
+                if let Some(f) = maybe_field {
+                    if f.vtable.serialize_with.is_some() {
+                        let owned_peek = cpeek.custom_serialization(f).unwrap();
+                        let old_shape = cpeek.shape();
+                        let new_shape = owned_peek.shape();
+                        trace!(
+                            "{old_shape} has custom serialization, serializing as {new_shape} instead"
+                        );
+                        // we have to recurse here, as we need to keep the owned_peek alive
+                        // until serialization is complete, and borrow rules are hard with the
+                        // iterative method
+                        serialize_iterative(owned_peek.as_peek(), serializer)?;
+                        continue;
+                    }
+                }
 
                 if cpeek
                     .shape()
