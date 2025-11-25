@@ -11,8 +11,6 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use facet_core::{Def, Facet, Field, PointerType, ShapeAttribute, StructKind, Type, UserType};
-#[cfg(feature = "alloc")]
-use facet_reflect::OwnedPeek;
 use facet_reflect::{
     FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekListLikeIter, PeekMapIter, PeekSetIter,
     ScalarType,
