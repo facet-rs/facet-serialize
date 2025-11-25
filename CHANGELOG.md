@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.1](https://github.com/facet-rs/facet-serialize/compare/v0.31.0...v0.31.1) - 2025-11-25
+
+### Other
+
+- Handle proxy fields
+- *(deps)* update rust crate facet to v0.31.6 ([#13](https://github.com/facet-rs/facet-serialize/pull/13))
+- *(deps)* update github/codeql-action action to v4 ([#6](https://github.com/facet-rs/facet-serialize/pull/6))
+- *(deps)* update rust crate facet to v0.31.4 ([#8](https://github.com/facet-rs/facet-serialize/pull/8))
+- *(deps)* update rust crate facet-testhelpers to v0.31.4 ([#9](https://github.com/facet-rs/facet-serialize/pull/9))
+- *(deps)* update rust crate insta to v1.44.1 ([#11](https://github.com/facet-rs/facet-serialize/pull/11))
+- *(deps)* update actions/checkout action to v6 ([#12](https://github.com/facet-rs/facet-serialize/pull/12))
+
 ## [0.31.0](https://github.com/facet-rs/facet-serialize/compare/v0.30.0...v0.31.0) - 2025-10-31
 
 ### Other
