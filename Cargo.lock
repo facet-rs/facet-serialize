@@ -108,9 +108,9 @@ dependencies = [
 
 [[package]]
 name = "facet-reflect"
-version = "0.31.0"
+version = "0.31.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221fc3c656d85e28bfa332f2346931fea86ef248572ffeb4ba71f73df3c43fc1"
+checksum = "b46f661d42efcc9e4f7871388350b77f765fbea36c7020ab3d07ef928a80d6ae"
 dependencies = [
  "bitflags",
  "facet-core",
