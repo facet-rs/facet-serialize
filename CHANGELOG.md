@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.2](https://github.com/facet-rs/facet-serialize/compare/v0.31.1...v0.31.2) - 2025-11-25
+
+### Other
+
+- *(deps)* update github/codeql-action action to v4 ([#18](https://github.com/facet-rs/facet-serialize/pull/18))
+- *(deps)* update actions/checkout action to v6 ([#17](https://github.com/facet-rs/facet-serialize/pull/17))
+
 ## [0.31.1](https://github.com/facet-rs/facet-serialize/compare/v0.31.0...v0.31.1) - 2025-11-25
 
 ### Other

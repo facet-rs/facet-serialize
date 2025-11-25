@@ -112,7 +112,7 @@ dependencies = [
 
 [[package]]
 name = "facet-serialize"
-version = "0.31.1"
+version = "0.31.2"
 dependencies = [
  "cargo-husky",
  "facet",
