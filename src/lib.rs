@@ -2,7 +2,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::std_instead_of_core)]
 #![warn(clippy::std_instead_of_alloc)]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
 extern crate alloc;
@@ -16,6 +16,14 @@ use facet_reflect::{
     ScalarType,
 };
 use log::trace;
+
+#[cfg(feature = "miette")]
+mod spanned;
+#[cfg(feature = "miette")]
+pub use spanned::{Span, Spanned, is_spanned_shape};
+
+#[cfg(feature = "miette")]
+pub use miette::SourceSpan;
 
 fn variant_is_newtype_like(variant: &facet_core::Variant) -> bool {
     variant.data.kind == facet_core::StructKind::Tuple && variant.data.fields.len() == 1

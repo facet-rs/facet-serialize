@@ -13,11 +13,13 @@ categories = ["encoding", "development-tools"]
 default = ["std"]
 std = ["alloc"]
 alloc = ["facet-core/alloc", "facet-reflect/alloc"]
+miette = ["dep:miette"]
 
 [dependencies]
-facet-core = { version = "0.31.7", default-features = false }
-facet-reflect = { version = "0.31.7", default-features = false }
+facet-core = { path = "../facet/facet-core", default-features = false }
+facet-reflect = { path = "../facet/facet-reflect", default-features = false }
 log = "0.4.27"
+miette = { version = "7", optional = true }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", default-features = false, features = [

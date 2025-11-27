@@ -21,6 +21,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b02b629252fe8ef6460461409564e2c21d0c8e77e0944f3d189ff06c4e932ad"
 
 [[package]]
+name = "cfg-if"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
 name = "color-backtrace"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -54,7 +60,7 @@ version = "0.31.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61e137a8dd9fd9aa1e57d216b6dac1a56bf053aa993569efa3e37a8c8351f5a7"
 dependencies = [
- "facet-core",
+ "facet-core 0.31.7",
  "facet-macros",
  "static_assertions",
 ]
@@ -70,12 +76,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "facet-core"
+version = "0.31.8"
+dependencies = [
+ "bitflags",
+ "impls",
+]
+
+[[package]]
 name = "facet-macros"
 version = "0.31.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "430c16795d9f2b97cf71d3af2de995a881893de8c5696a1172846eb67544c787"
 dependencies = [
- "facet-core",
+ "facet-core 0.31.7",
  "facet-macros-emit",
 ]
 
@@ -102,12 +116,11 @@ dependencies = [
 
 [[package]]
 name = "facet-reflect"
-version = "0.31.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c8581c34ca6f0cec86091b5633aff723baa0e121c35da0f32620b8ef3bb44c"
+version = "0.31.8"
 dependencies = [
  "bitflags",
- "facet-core",
+ "facet-core 0.31.8",
+ "indexset",
 ]
 
 [[package]]
@@ -116,11 +129,12 @@ version = "0.31.2"
 dependencies = [
  "cargo-husky",
  "facet",
- "facet-core",
+ "facet-core 0.31.8",
  "facet-reflect",
  "facet-testhelpers",
  "insta",
  "log",
+ "miette",
 ]
 
 [[package]]
@@ -146,10 +160,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "ftree"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae0379499242d3b9355c5069b43b9417def8c9b09903b930db1fe49318dc9e9"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "impls"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a46645bbd70538861a90d0f26c31537cdf1e44aae99a794fb75a664b70951bc"
+
+[[package]]
+name = "indexset"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff794cab64c942437d60272e215f923d466b23dfa6c999cdd0cafe5b6d170805"
+dependencies = [
+ "ftree",
+]
 
 [[package]]
 name = "insta"
@@ -173,6 +205,28 @@ name = "log"
 version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
+
+[[package]]
+name = "miette"
+version = "7.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f98efec8807c63c752b5bd61f862c165c115b0a35685bdcfd9238c7aeb592b7"
+dependencies = [
+ "cfg-if",
+ "miette-derive",
+ "unicode-width",
+]
+
+[[package]]
+name = "miette-derive"
+version = "7.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db5b29714e950dbb20d5e6f74f9dcec4edbcc1067bb7f8ed198c097b8c1a818b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "mutants"
@@ -217,6 +271,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
+name = "serde"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+dependencies = [
+ "serde_core",
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_core"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "similar"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -227,6 +311,17 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "syn"
+version = "2.0.111"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "390cc9a294ab71bdb1aa2e99d13be9c753cd2d7bd6560c77118597410c4d2e87"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
 
 [[package]]
 name = "termcolor"
@@ -242,6 +337,12 @@ name = "unicode-ident"
 version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f63a545481291138910575129486daeaf8ac54aee4387fe7906919f7830c7d9d"
+
+[[package]]
+name = "unicode-width"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
 
 [[package]]
 name = "unsynn"
