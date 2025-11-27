@@ -2,7 +2,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::std_instead_of_core)]
 #![warn(clippy::std_instead_of_alloc)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
 extern crate alloc;
@@ -12,21 +12,45 @@ use alloc::vec::Vec;
 
 use facet_core::{Def, Facet, Field, PointerType, ShapeAttribute, StructKind, Type, UserType};
 use facet_reflect::{
-    FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekListLikeIter, PeekMapIter, PeekSetIter,
-    ScalarType,
+    FieldIter, FieldsForSerializeIter, HasFields, Peek, PeekEnum, PeekListLikeIter, PeekMapIter,
+    PeekSetIter, ScalarType,
 };
 use log::trace;
 
-#[cfg(feature = "miette")]
-mod spanned;
-#[cfg(feature = "miette")]
-pub use spanned::{Span, Spanned, is_spanned_shape};
-
-#[cfg(feature = "miette")]
-pub use miette::SourceSpan;
-
 fn variant_is_newtype_like(variant: &facet_core::Variant) -> bool {
     variant.data.kind == facet_core::StructKind::Tuple && variant.data.fields.len() == 1
+}
+
+/// Helper to push variant content serialization tasks onto the stack.
+/// This handles newtype, tuple, and struct variants.
+fn push_variant_content_tasks<'mem, 'facet>(
+    stack: &mut Vec<SerializeTask<'mem, 'facet>>,
+    peek_enum: &PeekEnum<'mem, 'facet>,
+    variant: &'static facet_core::Variant,
+) {
+    if variant_is_newtype_like(variant) {
+        // Newtype variant - serialize the inner value directly
+        let fields = peek_enum.fields_for_serialize().collect::<Vec<_>>();
+        let (field, field_peek) = fields[0];
+        stack.push(SerializeTask::Value(field_peek, Some(field)));
+    } else if variant.data.kind == StructKind::Tuple || variant.data.kind == StructKind::TupleStruct
+    {
+        // Tuple variant - will serialize as array
+        let len = peek_enum.fields_for_serialize().count();
+        stack.push(SerializeTask::TupleVariant {
+            items: peek_enum.fields_for_serialize(),
+            first: true,
+            len,
+        });
+    } else {
+        // Struct variant - will serialize as object
+        let len = peek_enum.fields_for_serialize().count();
+        stack.push(SerializeTask::StructVariant {
+            items: peek_enum.fields_for_serialize(),
+            first: true,
+            len,
+        });
+    }
 }
 
 // --- Serializer Trait Definition ---
@@ -266,7 +290,6 @@ enum SerializeTask<'mem, 'facet> {
     },
     // End markers
     EndObject,
-    EndArray,
     EndMapKey,
     EndMapValue,
     EndField,
@@ -274,6 +297,19 @@ enum SerializeTask<'mem, 'facet> {
     SerializeFieldName(&'static str),
     SerializeMapKey(Peek<'mem, 'facet>),
     SerializeMapValue(Peek<'mem, 'facet>),
+    // Enum variant content tasks (for tagged enums)
+    TupleVariant {
+        items: FieldsForSerializeIter<'mem, 'facet>,
+        first: bool,
+        len: usize,
+    },
+    StructVariant {
+        items: FieldsForSerializeIter<'mem, 'facet>,
+        first: bool,
+        len: usize,
+    },
+    /// Serialize a string value (for tag fields)
+    SerializeStr(&'static str),
 }
 
 /// Serializes a `Peek` value using the provided `Serializer`.
@@ -573,6 +609,7 @@ where
                         }
                     }
                     (_, Type::User(UserType::Enum(_))) => {
+                        let shape = cpeek.shape();
                         let peek_enum = cpeek.into_enum().unwrap();
                         let variant = peek_enum
                             .active_variant()
@@ -588,54 +625,91 @@ where
                         serializer.start_enum_variant(discriminant)?;
                         let flattened = maybe_field.map(|f| f.flattened).unwrap_or_default();
 
+                        // Determine enum representation from shape attributes
+                        let is_untagged = shape.is_untagged();
+                        let tag_attr = shape.get_tag_attr();
+                        let content_attr = shape.get_content_attr();
+
                         if variant.data.fields.is_empty() {
                             // Unit variant
-                            serializer.serialize_unit_variant(variant_index, variant.name)?;
-                        } else {
-                            if !flattened {
-                                // For now, treat all enum variants with data as objects
+                            if is_untagged {
+                                // Untagged unit variant - serialize as null
+                                serializer.serialize_unit()?;
+                            } else if let Some(tag) = tag_attr {
+                                // Internally or adjacently tagged unit variant
+                                // Serialize as {"tag": "VariantName"}
                                 serializer.start_object(Some(1))?;
-                                stack.push(SerializeTask::EndObject);
-
-                                // Serialize variant name as field name
-                                serializer.serialize_field_name(variant.name)?;
-                            }
-
-                            if variant_is_newtype_like(variant) {
-                                // Newtype variant - serialize the inner value directly
-                                let fields = peek_enum.fields_for_serialize().collect::<Vec<_>>();
-                                let (field, field_peek) = fields[0];
-                                // TODO: error if `skip_serialize` is set?
-                                stack.push(SerializeTask::Value(field_peek, Some(field)));
-                            } else if variant.data.kind == StructKind::Tuple
-                                || variant.data.kind == StructKind::TupleStruct
-                            {
-                                // Tuple variant - serialize as array
-                                let fields = peek_enum.fields_for_serialize().count();
-                                serializer.start_array(Some(fields))?;
-                                stack.push(SerializeTask::EndArray);
-
-                                // Push fields in reverse order for tuple variant
-                                let fields_for_serialize =
-                                    peek_enum.fields_for_serialize().collect::<Vec<_>>();
-                                for (field, field_peek) in fields_for_serialize.into_iter().rev() {
-                                    stack.push(SerializeTask::Value(field_peek, Some(field)));
-                                }
+                                serializer.serialize_field_name(tag)?;
+                                serializer.serialize_str(variant.name)?;
+                                serializer.end_field()?;
+                                serializer.end_object()?;
                             } else {
-                                // Struct variant - serialize as object
-                                let fields = peek_enum.fields_for_serialize().count();
-                                serializer.start_object(Some(fields))?;
-                                stack.push(SerializeTask::EndObject);
+                                // Externally tagged (default) - serialize as string
+                                serializer.serialize_unit_variant(variant_index, variant.name)?;
+                            }
+                        } else if is_untagged {
+                            // Untagged enum - serialize variant content directly without wrapper
+                            push_variant_content_tasks(&mut stack, &peek_enum, variant);
+                        } else if let (Some(tag), Some(content)) = (tag_attr, content_attr) {
+                            // Adjacently tagged: {"tag": "VariantName", "content": {...}}
+                            serializer.start_object(Some(2))?;
+                            stack.push(SerializeTask::EndObject);
 
-                                // Push fields in reverse order for struct variant
+                            // Content field (pushed first, processed last)
+                            stack.push(SerializeTask::EndField);
+                            push_variant_content_tasks(&mut stack, &peek_enum, variant);
+                            stack.push(SerializeTask::SerializeFieldName(content));
+
+                            // Tag field (pushed last, processed first)
+                            stack.push(SerializeTask::EndField);
+                            stack.push(SerializeTask::SerializeStr(variant.name));
+                            stack.push(SerializeTask::SerializeFieldName(tag));
+                        } else if let Some(tag) = tag_attr {
+                            // Internally tagged: {"tag": "VariantName", ...fields}
+                            // Only works for struct variants
+                            if variant.data.kind == StructKind::Struct {
                                 let fields_for_serialize =
                                     peek_enum.fields_for_serialize().collect::<Vec<_>>();
+                                let field_count = fields_for_serialize.len() + 1; // +1 for tag
+                                serializer.start_object(Some(field_count))?;
+                                stack.push(SerializeTask::EndObject);
+
+                                // Push variant fields in reverse order
                                 for (field, field_peek) in fields_for_serialize.into_iter().rev() {
                                     stack.push(SerializeTask::EndField);
                                     stack.push(SerializeTask::Value(field_peek, Some(field)));
                                     stack.push(SerializeTask::SerializeFieldName(field.name));
                                 }
+
+                                // Tag field (pushed last, processed first)
+                                stack.push(SerializeTask::EndField);
+                                stack.push(SerializeTask::SerializeStr(variant.name));
+                                stack.push(SerializeTask::SerializeFieldName(tag));
+                            } else {
+                                // For non-struct variants with internal tagging, fall back to adjacent
+                                // This matches serde's behavior
+                                serializer.start_object(Some(2))?;
+                                stack.push(SerializeTask::EndObject);
+
+                                // Content field
+                                stack.push(SerializeTask::EndField);
+                                push_variant_content_tasks(&mut stack, &peek_enum, variant);
+                                stack.push(SerializeTask::SerializeFieldName("content"));
+
+                                // Tag field
+                                stack.push(SerializeTask::EndField);
+                                stack.push(SerializeTask::SerializeStr(variant.name));
+                                stack.push(SerializeTask::SerializeFieldName(tag));
                             }
+                        } else {
+                            // Externally tagged (default): {"VariantName": {...}}
+                            if !flattened {
+                                serializer.start_object(Some(1))?;
+                                stack.push(SerializeTask::EndObject);
+                                serializer.serialize_field_name(variant.name)?;
+                            }
+
+                            push_variant_content_tasks(&mut stack, &peek_enum, variant);
                         }
                     }
                     (_, Type::Pointer(pointer_type)) => {
@@ -806,13 +880,53 @@ where
                 stack.push(SerializeTask::Value(value_peek, None));
                 serializer.begin_map_value()?;
             }
+            SerializeTask::SerializeStr(s) => {
+                serializer.serialize_str(s)?;
+            }
+            SerializeTask::TupleVariant {
+                mut items,
+                first,
+                len,
+            } => {
+                if first {
+                    serializer.start_array(Some(len))?;
+                }
+                if let Some((field, value)) = items.next() {
+                    stack.push(SerializeTask::TupleVariant {
+                        items,
+                        first: false,
+                        len,
+                    });
+                    stack.push(SerializeTask::Value(value, Some(field)));
+                } else {
+                    serializer.end_array()?;
+                }
+            }
+            SerializeTask::StructVariant {
+                mut items,
+                first,
+                len,
+            } => {
+                if first {
+                    serializer.start_object(Some(len))?;
+                }
+                if let Some((field, value)) = items.next() {
+                    stack.push(SerializeTask::StructVariant {
+                        items,
+                        first: false,
+                        len,
+                    });
+                    stack.push(SerializeTask::EndField);
+                    stack.push(SerializeTask::Value(value, Some(field)));
+                    stack.push(SerializeTask::SerializeFieldName(field.name));
+                } else {
+                    serializer.end_object()?;
+                }
+            }
 
             // --- End composite type tasks ---
             SerializeTask::EndObject => {
                 serializer.end_object()?;
-            }
-            SerializeTask::EndArray => {
-                serializer.end_array()?;
             }
             SerializeTask::EndMapKey => {
                 serializer.end_map_key()?;
